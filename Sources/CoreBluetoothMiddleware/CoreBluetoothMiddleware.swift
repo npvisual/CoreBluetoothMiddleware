@@ -113,6 +113,14 @@ public final class CoreBluetoothMiddleware: Middleware {
     
     public func handle(action: BluetoothAction, from dispatcher: ActionSource, afterReducer: inout AfterReducer) {
         switch action {
+        case let .request(.startAdvertising(advertisementData)): peripheralManager?.startAdvertising(advertisementData)
+        case .request(.stopAdvertising): peripheralManager?.stopAdvertising()
+        case let .request(.requestManagerState(type)):
+            switch type {
+            case .peripheral: peripheralDelegate.output?.dispatch(.status(.gotManagerState(.peripheral, peripheralManager?.state ?? .unknown)))
+            case .central:
+                centralDelegate.output?.dispatch(.status(.gotManagerState(.central, centralManager?.state ?? .unknown)))
+            }
         default: return
         }
     }
