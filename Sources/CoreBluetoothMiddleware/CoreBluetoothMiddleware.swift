@@ -20,6 +20,8 @@ public enum StatusAction {
     case gotManagerState(BTManagerType, CBManagerState)
     case gotStateRestoration(BTManagerType, [String: Any])
     case gotServiceAdditionAck(CBService)
+    case gotSubscribedAck(CBCentral, CBCharacteristic)
+    case gotUnsubscribed(CBCentral, CBCharacteristic)
     case gotAdvertisingAck
     case receivedError(Error)
 }
@@ -64,6 +66,9 @@ extension Reducer where ActionType == StatusAction, StateType == BluetoothState 
             }
         case .gotAdvertisingAck,
              .gotStateRestoration,
+             .gotServiceAdditionAck,
+             .gotSubscribedAck,
+             .gotUnsubscribed,
              .receivedError:
             break
         }
@@ -154,10 +159,15 @@ class PeripheralManagerDelegate: NSObject, CBPeripheralManagerDelegate {
         output?.dispatch(.status(.gotStateRestoration(.peripheral, dict)))
     }
     
-    
+    func peripheralManager(_ peripheral: CBPeripheralManager, didAdd service: CBService, error: Error?) {
+        if let error = error {
+            output?.dispatch(.status(.receivedError(error)))
+        } else {
+            output?.dispatch(.status(.gotServiceAdditionAck(service)))
+        }
+    }
     
     func peripheralManagerDidStartAdvertising(_ peripheral: CBPeripheralManager, error: Error?) {
-        
         if let error = error {
             output?.dispatch(.status(.receivedError(error)))
         } else {
@@ -165,6 +175,13 @@ class PeripheralManagerDelegate: NSObject, CBPeripheralManagerDelegate {
         }
     }
     
+    func peripheralManager(_ peripheral: CBPeripheralManager, central: CBCentral, didSubscribeTo characteristic: CBCharacteristic) {
+        output?.dispatch(.status(.gotSubscribedAck(central, characteristic)))
+    }
+    
+    func peripheralManager(_ peripheral: CBPeripheralManager, central: CBCentral, didUnsubscribeFrom characteristic: CBCharacteristic) {
+        output?.dispatch(.status(.gotUnsubscribed(central, characteristic)))
+    }
 }
 
 // MARK: - PRISM
